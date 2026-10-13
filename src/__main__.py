@@ -1,16 +1,19 @@
-import argparse
+import sys
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(...)
-    parser.add_argument("--functions_definition", default=...)
-    # idem pour --input et --output
-    return parser.parse_args()
+from .errors import InputError
+from .parser import parse_args
+from .loaders import load_functions, load_prompts
 
 
 def main() -> int:
     args = parse_args()
-    ...
+    try:
+        functions = load_functions(args.functions_definition)
+        prompts = load_prompts(args.input)
+    except InputError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    print(f"{len(functions)} functions, {len(prompts)} prompts loaded")
     return 0
 
 
