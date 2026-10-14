@@ -1,6 +1,6 @@
 import json
 from typing import Any, TypeVar
-
+import argparse
 from pydantic import ValidationError, BaseModel
 
 from .errors import InputError
@@ -9,7 +9,7 @@ from .models import FunctionDefinition, PromptItem
 T = TypeVar("T", bound=BaseModel)
 
 
-def _read_json(path: str) -> Any:
+def read_json(path: str) -> Any:
     """
     Read and parse a JSON file, raising InputError on any failure.
     """
@@ -28,9 +28,9 @@ def _read_json(path: str) -> Any:
 
 def _load_list(path: str, model: type[T]) -> list[T]:
     """Read a JSON array and validate each item against model."""
-    raw = _read_json(path)
+    raw = read_json(path)
     if not isinstance(raw, list):
-        raise InputError(f"Expected list got {type(raw).__name__}")
+        raise InputError(f"{path} Expected list got {type(raw).__name__}")
     if raw == []:
         raise InputError(f"Empty file given {path}")
     items: list[T] = []
@@ -51,3 +51,25 @@ def load_prompts(path: str) -> list[PromptItem]:
     """Load and validate the prompts."""
     prompts = _load_list(path, PromptItem)
     return prompts
+
+def parse_args() -> argparse.Namespace:
+    """Parse the command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Translate natural-language prompts into function calls."
+    )
+    parser.add_argument(
+        "--functions_definition",
+        default="data/input/functions_definition.json",
+        help="path to the functions definition file",
+    )
+    parser.add_argument(
+        "--input",
+        default="data/input/function_calling_tests.json",
+        help="path to the prompts file",
+    )
+    parser.add_argument(
+        "--output",
+        default="data/output/function_calls.json",
+        help="path to the functions calls outputs file",
+    )
+    return parser.parse_args()

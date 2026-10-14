@@ -11,6 +11,3 @@ env/
 
 # Build
 data/output/
-
-# OS
-.DS_Store

@@ -1,8 +1,7 @@
 import sys
 
 from .errors import InputError
-from .parser import parse_args
-from .loaders import load_functions, load_prompts
+from .loaders import load_functions, load_prompts, parse_args
 
 
 def main() -> int:
