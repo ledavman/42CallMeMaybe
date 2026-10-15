@@ -40,7 +40,6 @@ def allowed_name_tokens(
         valid_ids.add(quote_id)
     return valid_ids
 
-# quote_id: int = {texte: id for id, texte in vocab.items()}['"']
 
 def generate_function_name(
     logits_fn: LogitsFn,
