@@ -1,11 +1,13 @@
 import re
 
-from .decoder import LogitsFn, pick_token
+from typing import Callable
+from .decoder import LogitsFn, pick_token, generate_choice, candidate_tokens
 from .errors import DecodingError
 
 NUMBER_PREFIX = re.compile(r"-?(\d+(\.\d*)?)?")
 NUMBER_COMPLETE = re.compile(r"-?\d+(\.\d+)?")
 MAX_NUMBER_TOKENS = 20
+MAX_STRING_TOKENS = 100
 
 
 def number_tokens(vocab: dict[int, str]) -> dict[int, str]:
@@ -44,3 +46,50 @@ def generate_number(
     if not NUMBER_COMPLETE.fullmatch(text):
         raise DecodingError(f"could not build a valid number: {text!r}")
     return float(text)
+
+
+def string_tokens(vocab: dict[int, str]) -> dict[int, str]:
+    """Tokens that can sit inside a JSON string."""
+    return {
+        token_id: text
+        for token_id, text in vocab.items()
+        if text
+        and '"' not in text
+        and "\\" not in text
+        and text.isprintable()
+    }
+
+
+def generate_string(
+    logits_fn: LogitsFn,
+    input_ids: list[int],
+    str_tokens: dict[int, str],
+    quote_id: int,
+) -> str:
+    """Generate one string value under constraint (extends input_ids)."""
+    allowed = set(str_tokens) | {quote_id}
+    text = ""
+    for _ in range(MAX_STRING_TOKENS):
+        token_id = pick_token(logits_fn(input_ids), allowed)
+        if token_id == quote_id:
+            break
+        text += str_tokens[token_id]
+        input_ids.append(token_id)
+    return text
+
+
+EncodeFn = Callable[[str], list[int]]
+
+def generate_boolean(
+    logits_fn: LogitsFn,
+    input_ids: list[int],
+    vocab: dict[int, str],
+    end_id: int,
+    encode: EncodeFn,
+) -> bool:
+    """Generate true or false under constraint (extends input_ids)."""
+    choices = ["true", "false"]
+    candidates = candidate_tokens(vocab, choices)
+    word = generate_choice(logits_fn, input_ids, candidates, choices, end_id)
+    input_ids.extend(encode(word))
+    return word == "true"

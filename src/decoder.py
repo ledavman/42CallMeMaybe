@@ -41,18 +41,18 @@ def allowed_name_tokens(
     return valid_ids
 
 
-def generate_function_name(
+def generate_choice(
     logits_fn: LogitsFn,
     prompt_ids: list[int],
     candidates: dict[int, str],
-    names: list[str],
-    quote_id: int,
+    choices: list[str],
+    end_id: int,
 ) -> str:
     """Generate one function name, token by token, under constraint."""
     input_ids = list(prompt_ids)
     prefix = ""
     while True:
-        allowed = allowed_name_tokens(prefix, candidates, names, quote_id)
+        allowed = allowed_name_tokens(prefix, candidates, choices, end_id)
         if not allowed:
             raise DecodingError(f"no valid token after {prefix!r}")
         if len(allowed) == 1:
@@ -60,7 +60,7 @@ def generate_function_name(
         else:
             logits = logits_fn(input_ids)
             token_id = pick_token(logits, allowed)
-        if token_id == quote_id:
+        if token_id == end_id:
             break
         prefix += candidates[token_id]
         input_ids.append(token_id)
