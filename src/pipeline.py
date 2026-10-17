@@ -9,6 +9,8 @@ from .values import (
     generate_boolean, generate_number, generate_string,
 )
 from.errors import DecodingError
+from llm_sdk import Small_LLM_Model
+from .vocab import load_vocab
 
 
 class Context(BaseModel):
@@ -66,11 +68,33 @@ def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
 
 def find_token_id(vocab: dict[int, str], text: str) -> int:
     """Return the id of the token whose text is exactly ``text``."""
-    result: int = ({txt: id for id, txt in vocab.items()}[text])
-    if not result:
-        raise DecodingError(f"'{text}' not found in specified vocab")
-    return result
+    for token_id, token_text in vocab.items():
+        if token_text == text:
+            return token_id
+    raise DecodingError(f"'{text}' not found in specified vocab")
 
 
-def make_context(model, functions) -> Context:
+def make_context(
+    model: Small_LLM_Model, functions: list[FunctionDefinition]
+) -> Context:
+    """Precompute everything that does not depend on the prompt."""
+    vocab = load_vocab(model.get_path_to_vocab_file())
+    names = [f.name for f in functions]
+
+    def encode(text: str) -> list[int]:
+        ids: list[int] = model.encode(text).tolist()[0]
+        return ids
+
+    return Context(
+        logits_fn=model.get_logits_from_input_ids,
+        encode=encode,
+        functions=functions,
+        vocab=vocab,
+        name_candidates=candidate_tokens(vocab, names),
+        num_tokens=number_tokens(vocab),
+        str_tokens=string_tokens(vocab),
+        quote_id=find_token_id(vocab, '"'),
+        comma_id=find_token_id(vocab, ","),
+        brace_id=find_token_id(vocab, "}"),
+    )
     
