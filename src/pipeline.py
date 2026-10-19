@@ -2,11 +2,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from .decoder import EncodeFn, LogitsFn, generate_choice
+from .decoder import LogitsFn, generate_choice, candidate_tokens
 from .models import FunctionCall, FunctionDefinition, PromptItem
 from .prompt import build_prompt
 from .values import (
-    generate_boolean, generate_number, generate_string,
+    generate_boolean, generate_number, generate_string, EncodeFn, number_tokens, string_tokens
 )
 from.errors import DecodingError
 from llm_sdk import Small_LLM_Model
@@ -26,6 +26,7 @@ class Context(BaseModel):
     quote_id: int
     comma_id: int
     brace_id: int
+    end_ids: set[int]
 
 def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
     """Turn one prompt into a function call, token by token."""
@@ -55,7 +56,7 @@ def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
             params[pname] = int(number) if spec.type == "integer" else number
         elif spec.type == "string":
             params[pname] = generate_string(
-                ctx.logits_fn, input_ids, ctx.str_tokens, ctx.quote_id
+                ctx.logits_fn, input_ids, ctx.str_tokens, ctx.end_ids,
             )
         else:
             params[pname] = generate_boolean(
@@ -72,6 +73,15 @@ def find_token_id(vocab: dict[int, str], text: str) -> int:
         if token_text == text:
             return token_id
     raise DecodingError(f"'{text}' not found in specified vocab")
+
+
+def string_end_tokens(vocab: dict[int, str]) -> set[int]:
+    """Ids of the tokens whose text starts with a double quote."""
+    quoted_ids = set()
+    for id, text in vocab.items():
+        if text.startswith('"'):
+            quoted_ids.add(id)
+    return quoted_ids
 
 
 def make_context(
@@ -96,5 +106,6 @@ def make_context(
         quote_id=find_token_id(vocab, '"'),
         comma_id=find_token_id(vocab, ","),
         brace_id=find_token_id(vocab, "}"),
+        end_ids=string_end_tokens(vocab)
     )
     

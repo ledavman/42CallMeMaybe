@@ -65,4 +65,3 @@ def generate_choice(
         prefix += candidates[token_id]
         input_ids.append(token_id)
     return prefix
-

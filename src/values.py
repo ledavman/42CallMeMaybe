@@ -64,14 +64,14 @@ def generate_string(
     logits_fn: LogitsFn,
     input_ids: list[int],
     str_tokens: dict[int, str],
-    quote_id: int,
+    end_ids: set[int]
 ) -> str:
     """Generate one string value under constraint (extends input_ids)."""
-    allowed = set(str_tokens) | {quote_id}
+    allowed = set(str_tokens) | end_ids
     text = ""
     for _ in range(MAX_STRING_TOKENS):
         token_id = pick_token(logits_fn(input_ids), allowed)
-        if token_id == quote_id:
+        if token_id in end_ids:
             break
         text += str_tokens[token_id]
         input_ids.append(token_id)
