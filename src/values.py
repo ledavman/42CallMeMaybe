@@ -60,6 +60,15 @@ def string_tokens(vocab: dict[int, str]) -> dict[int, str]:
     }
 
 
+def first_string_tokens(str_tokens: dict[int, str]) -> dict[int, str]:
+    """String tokens allowed as the first token of a value."""
+    return {
+        token_id: text
+        for token_id, text in str_tokens.items()
+        if not text.startswith(" ") or text.strip() == ""
+    }
+
+
 def generate_string(
     logits_fn: LogitsFn,
     input_ids: list[int],
