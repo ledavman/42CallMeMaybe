@@ -1,16 +1,17 @@
 from typing import Any
-
+import sys
+from .vocab import load_vocab
+from llm_sdk import Small_LLM_Model
 from pydantic import BaseModel
 
 from .decoder import LogitsFn, generate_choice, candidate_tokens
 from .models import FunctionCall, FunctionDefinition, PromptItem
 from .prompt import build_prompt
 from .values import (
-    generate_boolean, generate_number, generate_string, EncodeFn, number_tokens, string_tokens, first_string_tokens
+    generate_boolean, generate_number, generate_string, EncodeFn,
+    number_tokens, string_tokens, first_string_tokens
 )
-from.errors import DecodingError
-from llm_sdk import Small_LLM_Model
-from .vocab import load_vocab
+from .errors import DecodingError, AppError
 
 
 class Context(BaseModel):
@@ -28,6 +29,7 @@ class Context(BaseModel):
     brace_id: int
     end_ids: set[int]
     first_tokens: dict[int, str]
+
 
 def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
     """Turn one prompt into a function call, token by token."""
@@ -57,7 +59,8 @@ def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
             params[pname] = int(number) if spec.type == "integer" else number
         elif spec.type == "string":
             params[pname] = generate_string(
-                ctx.logits_fn, input_ids, ctx.str_tokens, ctx.end_ids, ctx.first_tokens,
+                ctx.logits_fn, input_ids, ctx.str_tokens,
+                ctx.end_ids, ctx.first_tokens,
             )
         else:
             params[pname] = generate_boolean(
@@ -96,6 +99,7 @@ def make_context(
         ids: list[int] = model.encode(text).tolist()[0]
         return ids
 
+    str_tokens = string_tokens(vocab)
     return Context(
         logits_fn=model.get_logits_from_input_ids,
         encode=encode,
@@ -103,11 +107,22 @@ def make_context(
         vocab=vocab,
         name_candidates=candidate_tokens(vocab, names),
         num_tokens=number_tokens(vocab),
-        str_tokens=string_tokens(vocab),
+        str_tokens=str_tokens,
         quote_id=find_token_id(vocab, '"'),
         comma_id=find_token_id(vocab, ","),
         brace_id=find_token_id(vocab, "}"),
         end_ids=string_end_tokens(vocab),
         first_tokens=first_string_tokens(str_tokens)
     )
-    
+
+
+def run_all(prompts: list[PromptItem], ctx: Context) -> list[FunctionCall]:
+    """Translate every prompt, skipping the ones that fail."""
+    results: list[FunctionCall] = []
+    for index, item in enumerate(prompts):
+        try:
+            results.append(build_call(item, ctx))
+        except AppError as e:
+            print(f"Skipped prompt {index} ({item.prompt!r}):"
+                  f" {e}", file=sys.stderr)
+    return results

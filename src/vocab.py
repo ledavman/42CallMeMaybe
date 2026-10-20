@@ -1,6 +1,7 @@
 from .loaders import read_json
 from .errors import InputError
 
+
 def _bytes_to_unicode() -> dict[int, str]:
     """Map each byte to the printable character used in the vocab."""
     printable = (
@@ -21,10 +22,12 @@ _UNICODE_TO_BYTE: dict[str, int] = {
     char: byte for byte, char in _bytes_to_unicode().items()
 }
 
+
 def token_to_text(token: str) -> str:
     """Convert a vocab token string into the real text it stands for."""
     raw = bytes(_UNICODE_TO_BYTE[c] for c in token)
     return raw.decode("utf-8")
+
 
 def load_vocab(path: str) -> dict[int, str]:
     """Return the mapping token id -> real text for every vocab entry."""

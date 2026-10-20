@@ -92,6 +92,7 @@ def generate_string(
 
 EncodeFn = Callable[[str], list[int]]
 
+
 def generate_boolean(
     logits_fn: LogitsFn,
     input_ids: list[int],

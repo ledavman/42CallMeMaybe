@@ -22,3 +22,4 @@ dev = [
 
 [tool.mypy]
 exclude = ["llm_sdk/"]
+mypy_path = "llm_sdk"

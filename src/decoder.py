@@ -17,7 +17,8 @@ def pick_token(logits: list[float], allowed: set[int]) -> int:
         raise DecodingError(e) from e
 
 
-def candidate_tokens(vocab: dict[int, str], names: list[str]) -> dict[int, str]:
+def candidate_tokens(vocab: dict[int, str],
+                     names: list[str]) -> dict[int, str]:
     """Keep only the tokens whose text appears inside some function name."""
     candidates: dict[int, str] = {}
     for token_id, token in vocab.items():
@@ -28,16 +29,15 @@ def candidate_tokens(vocab: dict[int, str], names: list[str]) -> dict[int, str]:
     return candidates
 
 
-def allowed_name_tokens(
-    prefix: str, candidates: dict[int, str], names: list[str], quote_id: int
-) -> set[int]:
+def allowed_name_tokens(prefix: str, candidates: dict[int, str],
+                        names: list[str], end_id: int) -> set[int]:
     """Return the token ids that keep ``prefix`` a valid name prefix."""
     valid_ids: set[int] = set()
     for token_id, text in candidates.items():
         if any(name.startswith(prefix + text) for name in names):
             valid_ids.add(token_id)
     if prefix in names:
-        valid_ids.add(quote_id)
+        valid_ids.add(end_id)
     return valid_ids
 
 

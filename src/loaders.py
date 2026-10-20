@@ -19,7 +19,8 @@ def read_json(path: str) -> Any:
     except FileNotFoundError:
         raise InputError(f"File not found: '{path}'") from None
     except json.JSONDecodeError as e:
-        raise InputError(f"File specified is not a valid JSON File '{path}': line: {e.lineno} col: {e.colno}. {e.msg}") from e
+        raise InputError(f"File specified is not a valid JSON File '{path}':"
+                         f"line: {e.lineno} col: {e.colno}. {e.msg}") from e
     except OSError as e:
         raise InputError(f"Can't open file '{path}'\n{e.strerror}") from e
     except UnicodeDecodeError as e:
@@ -38,8 +39,10 @@ def _load_list(path: str, model: type[T]) -> list[T]:
         try:
             items.append(model.model_validate(item))
         except ValidationError as e:
-            raise InputError(f"in {path} Item with index {index} causing {e}") from e
+            raise InputError(f"in {path} Item with index {index}"
+                             f" causing {e}") from e
     return items
+
 
 def load_functions(path: str) -> list[FunctionDefinition]:
     """Load and validate the function definitions."""
@@ -51,6 +54,7 @@ def load_prompts(path: str) -> list[PromptItem]:
     """Load and validate the prompts."""
     prompts = _load_list(path, PromptItem)
     return prompts
+
 
 def parse_args() -> argparse.Namespace:
     """Parse the command-line arguments."""
