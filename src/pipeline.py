@@ -6,7 +6,7 @@ from .decoder import LogitsFn, generate_choice, candidate_tokens
 from .models import FunctionCall, FunctionDefinition, PromptItem
 from .prompt import build_prompt
 from .values import (
-    generate_boolean, generate_number, generate_string, EncodeFn, number_tokens, string_tokens
+    generate_boolean, generate_number, generate_string, EncodeFn, number_tokens, string_tokens, first_string_tokens
 )
 from.errors import DecodingError
 from llm_sdk import Small_LLM_Model
@@ -27,6 +27,7 @@ class Context(BaseModel):
     comma_id: int
     brace_id: int
     end_ids: set[int]
+    first_tokens: dict[int, str]
 
 def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
     """Turn one prompt into a function call, token by token."""
@@ -106,6 +107,7 @@ def make_context(
         quote_id=find_token_id(vocab, '"'),
         comma_id=find_token_id(vocab, ","),
         brace_id=find_token_id(vocab, "}"),
-        end_ids=string_end_tokens(vocab)
+        end_ids=string_end_tokens(vocab),
+        first_tokens=first_string_tokens(str_tokens)
     )
     
