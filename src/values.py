@@ -1,6 +1,7 @@
 import re
+import json
 
-from typing import Callable
+from typing import Callable, Any
 from .decoder import LogitsFn, pick_token, generate_choice, candidate_tokens
 from .errors import DecodingError
 
@@ -49,15 +50,19 @@ def generate_number(
 
 
 def string_tokens(vocab: dict[int, str]) -> dict[int, str]:
-    """Tokens that can sit inside a JSON string."""
-    return {
-        token_id: text
-        for token_id, text in vocab.items()
-        if text
-        and '"' not in text
-        and "\\" not in text
-        and text.isprintable()
-    }
+    """Tokens that can safely appear inside a JSON string."""
+    result = {}
+
+    for token_id, text in vocab.items():
+        if not text or not text.isprintable():
+            continue
+        try:
+            json.loads('"' + text + '"')
+        except json.JSONDecodeError:
+            continue
+        result[token_id] = text
+
+    return result
 
 
 def first_string_tokens(str_tokens: dict[int, str]) -> dict[int, str]:
@@ -75,19 +80,28 @@ def generate_string(
     str_tokens: dict[int, str],
     end_ids: set[int],
     first_tokens: dict[int, str]
-) -> str:
-    """Generate one string value under constraint (extends input_ids)."""
+) -> str | Any:
+    """Generate one escaped JSON string value."""
     text = ""
     first_allowed = set(first_tokens) | end_ids
     later_allowed = set(str_tokens) | end_ids
+
     for _ in range(MAX_STRING_TOKENS):
         allowed = first_allowed if text == "" else later_allowed
         token_id = pick_token(logits_fn(input_ids), allowed)
+
         if token_id in end_ids:
             break
+
         text += str_tokens[token_id]
         input_ids.append(token_id)
-    return text
+
+    try:
+        return json.loads('"' + text + '"')
+    except json.JSONDecodeError as exc:
+        raise DecodingError(
+            f"could not build a valid JSON string: {text!r}"
+        ) from exc
 
 
 EncodeFn = Callable[[str], list[int]]

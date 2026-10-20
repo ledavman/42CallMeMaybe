@@ -3,7 +3,7 @@ install:
 
 run:
 	@if [ -d /goinfre ]; then export HF_HOME=/goinfre/$$USER/hf_cache; fi; \
-	time uv run python -m src 
+	time uv run python -m src
 
 debug:
 	uv run python -m pdb -m src
