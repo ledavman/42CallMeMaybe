@@ -57,7 +57,7 @@ def build_call(item: PromptItem, ctx: Context) -> FunctionCall:
             params[pname] = int(number) if spec.type == "integer" else number
         elif spec.type == "string":
             params[pname] = generate_string(
-                ctx.logits_fn, input_ids, ctx.str_tokens, ctx.end_ids,
+                ctx.logits_fn, input_ids, ctx.str_tokens, ctx.end_ids, ctx.first_tokens,
             )
         else:
             params[pname] = generate_boolean(
